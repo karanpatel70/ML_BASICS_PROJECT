@@ -1,3 +1,12 @@
 1) tokenization text extraction
 2) learn spacy 
 3) ui 
+4)ocr
+
+
+todo 
+ui advanacement 
+apis
+database and backend
+deploy
+bootstrap 
