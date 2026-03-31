@@ -4,6 +4,23 @@ from sklearn.metrics.pairwise import cosine_similarity
 import pdfminer.high_level
 from PIL import Image
 import pytesseract
+import sqlite3
+import pandas as pd
+
+#sql lite
+conn = sqlite3.connect("resume_data.db")
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS resumes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    filename TEXT,
+    score REAL,
+    matching_skills TEXT,
+    missing_skills TEXT
+)
+""")
+
 
 # ------------------ FUNCTION TO EXTRACT TEXT ------------------
 def extract_text_from_pdf(uploaded_file):
@@ -98,6 +115,33 @@ with col4:
     for skill in missing_skills:
         st.write(f"❌ {skill}")
 
+#insert insqlite
+if uploaded_file is not None and job_desc:
+
+    cursor.execute("""
+    INSERT INTO resumes (filename, score, matching_skills, missing_skills)
+    VALUES (?, ?, ?, ?)
+    """, (
+        uploaded_file.name,
+        score,
+        ",".join(matching_skills),
+        ",".join(missing_skills)
+    ))
+
+    conn.commit()
+
+# fetch data
+st.subheader("Previous Results")
+
+cursor.execute("SELECT * FROM resumes")
+rows = cursor.fetchall()
+
+for row in rows:
+    st.write(f"📄 {row[1]} | Score: {row[2]:.2f}%")
+
+conn.close()
+
+
 # ------------------ SUGGESTIONS ------------------
 st.subheader("Suggestions")
 
@@ -113,3 +157,6 @@ with tab1:
 with tab2:
     if resume_text:
         st.write(resume_text[:500] + "...")
+
+df = pd.DataFrame(rows, columns=["ID", "Resume", "Score", "Matched", "Missing"])
+st.dataframe(df)
