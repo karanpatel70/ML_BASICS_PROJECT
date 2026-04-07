@@ -1,0 +1,10 @@
+1) tokenization text extraction
+2) learn spacy 
+3) ui 
+
+
+learning day 1
+install pdfminer
+then extract text
+learn print len 
+extract PyMuPDf and pillow for image extractiong from pdf 

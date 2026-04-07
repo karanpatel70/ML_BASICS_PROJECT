@@ -2,8 +2,6 @@ import streamlit as st
 from pdfminer.high_level import extract_text
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import pytesseract
-pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
 
 st.title("AI Resume Screener")
 
