@@ -95,6 +95,55 @@ h1, h2, h3 {
     background: #00c6ff;
     border-radius: 10px;
 }
+</style>
+""", unsafe_allow_html=True)
+
+#light toggle
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+
+toggle = st.toggle("🌗 Dark Mode", value=(st.session_state.theme == "dark"))
+
+if toggle:
+    st.session_state.theme = "dark"
+else:
+    st.session_state.theme = "light"
+
+if st.session_state.theme == "dark":
+    bg = "linear-gradient(135deg, #0f2027, #203a43, #2c5364)"
+    card = "#1e2a38"
+    text = "white"
+else:
+    bg = "#f5f7fa"
+    card = "white"
+    text = "black"
+
+st.markdown(f"""
+<style>
+.stApp {{
+    background: {bg};
+    color: {text};
+    font-family: 'Segoe UI', sans-serif;
+}}
+
+.card {{
+    background-color: {card};
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
+    margin: 10px;
+}}
+
+.skill-bar {{
+    background: #444;
+    border-radius: 10px;
+    overflow: hidden;
+}}
+
+.skill-fill {{
+    height: 10px;
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+}}
 
 </style>
 """, unsafe_allow_html=True)
@@ -104,13 +153,15 @@ def extract_text_from_pdf(uploaded_file):
     text = pdfminer.high_level.extract_text(pdf_file)  # correct function
     return text
 
-if "logged_in" not in st.session_state or not st.session_state.logged_in:
-    st.warning("Please login first")
-    st.stop()
+# if "logged_in" not in st.session_state or not st.session_state.logged_in:
+#     st.warning("Please login first")
+#     st.stop()
+#     if st.sidebar.button("Logout"):
+#         st.session_state.logged_in = False
+#         st.switch_page("login.py")
 #title
 st.markdown("<h1> AI Resume Advisor</h1>", unsafe_allow_html=True)
 #title and input
-st.title("Resume Advisor ")
 uploaded_file = st.file_uploader("Upload Resume", type=["pdf"])
 goal = st.text_input("Enter your career goal (e.g. AI/ML Engineer)")
 
@@ -136,10 +187,18 @@ def get_similarity(resume_text, skills):
 #matching logic
 matched = []
 missing = []
+resume_text = extract_text_from_pdf(uploaded_file)
+goal = goal.lower().strip()
+
 if uploaded_file and goal:
 
     resume_text = extract_text_from_pdf(uploaded_file)
-    goal_skills = career_skills.get(goal.lower(), [])
+    goal_skills = []
+
+for key in career_skills:
+    if key in goal:
+        goal_skills = career_skills[key]
+        break
     similarity_scores = get_similarity(resume_text, goal_skills)
 
     matched = [skill for skill, score in similarity_scores.items() if score > 0.1]
@@ -166,10 +225,58 @@ if uploaded_file and goal:
     st.subheader("Career Goal")
     st.write(goal)
 
-st.subheader("Suggestions")
+#suggestions
+skill_advice = {
+    "python": {
+        "why": "Python is the core language for AI/ML and data work.",
+        "learn": "Basics → NumPy → Pandas",
+        "project": "Build a data analysis project using Pandas"
+    },
+    "machine learning": {
+        "why": "ML helps you build intelligent systems.",
+        "learn": "Supervised learning → regression → classification",
+        "project": "Build a spam email classifier"
+    },
+    "deep learning": {
+        "why": "Used in advanced AI like image and speech recognition.",
+        "learn": "Neural networks → CNN → TensorFlow/PyTorch",
+        "project": "Build an image classifier"
+    },
+    "sql": {
+        "why": "Used to handle and query data efficiently.",
+        "learn": "SELECT → JOIN → GROUP BY",
+        "project": "Build a database system"
+    },
+    "react": {
+        "why": "Helps build modern web interfaces.",
+        "learn": "Components → Hooks → State",
+        "project": "Build a portfolio website"
+    }
+}
+#ui suggestions
+st.markdown("## 🚀 Smart Suggestions")
+
+for skill in missing:
+    if skill in skill_advice:
+        advice = skill_advice[skill]
+
+        st.markdown(f"""
+        <div class="card">
+            <h4>📌 {skill.upper()}</h4>
+            <p><b>Why:</b> {advice['why']}</p>
+            <p><b>What to Learn:</b> {advice['learn']}</p>
+            <p><b>Project Idea:</b> 💡 {advice['project']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.info(f"👉 Start learning {skill}")
 
 for skill in missing:
     st.write(f"👉 Learn {skill}")
+
+if not missing:
+    st.warning("⚠️ No suggestions found. Try a clearer goal like 'AI/ML Engineer'")
+
 
 project_ideas = {
     "machine learning": "Build a spam classifier",
@@ -188,4 +295,3 @@ st.subheader("Learning roadmap")
 
 for i, skill in enumerate(missing, 1):
     st.write(f"{i}. Learn {skill}")
-
