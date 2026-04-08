@@ -24,6 +24,11 @@ st.set_page_config(page_title="AI Resume Screener", page_icon="📄", layout="wi
 # Custom CSS for Premium Look
 st.markdown("""
 <style>
+       .stApp {
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: white;
+    font-family: 'Segoe UI', sans-serif;
+}     
     /* Theme-Adaptive Cards */
     [data-testid="stMetric"] {
         background-color: rgba(151, 166, 195, 0.08); /* Adapts to background */
