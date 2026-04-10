@@ -8,26 +8,15 @@ import sqlite3
 import pandas as pd
 import re
 import plotly.graph_objects as go
-#login app connect
-if "logged_in" not in st.session_state or not st.session_state.logged_in:
-    st.warning("Please login first")
-    st.stop()
-if st.sidebar.button("Logout"):
-    st.session_state.logged_in = False
-    st.switch_page("login.py")
-#Configuration
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
-# Page configuration
-st.set_page_config(page_title="AI Resume Screener", page_icon="📄", layout="wide")
+from pathlib import Path
 
 # Custom CSS for Premium Look
 st.markdown("""
 <style>
-       .stApp {
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-    color: white;
-    font-family: 'Segoe UI', sans-serif;
+    .stApp {
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        color: white;
+        font-family: 'Segoe UI', sans-serif;
 }     
     /* Theme-Adaptive Cards */
     [data-testid="stMetric"] {
@@ -116,13 +105,35 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+#login 
+if "logged_in" not in st.session_state or not st.session_state.logged_in:
+    st.warning("Please login first")
+    st.stop()
+if "user_id" not in st.session_state or st.session_state.user_id is None:
+    st.warning("Your session is missing user details. Please login again.")
+    st.session_state.logged_in = False
+    st.switch_page("login.py")
+if st.sidebar.button("Logout"):
+    st.session_state.logged_in = False
+    st.session_state.user_id = None
+    st.session_state.username = None
+    st.switch_page("login.py")
+#Configuration
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+# Page configuration
+st.set_page_config(page_title="AI Resume Screener", page_icon="📄", layout="wide")
+
 # ------------------ DATABASE HELPERS ------------------
+DB_PATH = Path(__file__).resolve().parents[1] / "resume_data.db"
+
 def init_db():
-    conn = sqlite3.connect("resume_data.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS resumes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
         filename TEXT,
         score REAL,
         matching_skills TEXT,
@@ -136,17 +147,19 @@ def init_db():
     if "timestamp" not in columns:
         # Avoid DEFAULT CURRENT_TIMESTAMP in ALTER TABLE as it fails on some SQLite versions
         cursor.execute("ALTER TABLE resumes ADD COLUMN timestamp DATETIME")
+    if "user_id" not in columns:
+        cursor.execute("ALTER TABLE resumes ADD COLUMN user_id INTEGER")
         
     conn.commit()
     return conn
 
-def save_to_db(filename, score, matched, missing):
+def save_to_db(user_id, filename, score, matched, missing):
     conn = init_db()
     cursor = conn.cursor()
     cursor.execute("""
-    INSERT INTO resumes (filename, score, matching_skills, missing_skills, timestamp)
-    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-    """, (filename, score, ",".join(matched), ",".join(missing)))
+    INSERT INTO resumes (user_id, filename, score, matching_skills, missing_skills, timestamp)
+    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    """, (user_id, filename, score, ",".join(matched), ",".join(missing)))
     conn.commit()
     conn.close()
 
@@ -283,7 +296,7 @@ if uploaded_files and job_desc:
                 })
                 
                 # Save to DB
-                save_to_db(uploaded_file.name, score, matching_skills, missing_skills)
+                save_to_db(st.session_state.user_id, uploaded_file.name, score, matching_skills, missing_skills)
 
         # 4. Ranking Leaderboard
         if results:
@@ -377,9 +390,13 @@ if uploaded_files and job_desc:
                 st.text(job_desc)
 
         with tab4:
-            st.subheader("System Application History")
+            st.subheader("Your Application History")
             conn = init_db()
-            df_history = pd.read_sql_query("SELECT filename, score, matching_skills, timestamp FROM resumes ORDER BY timestamp DESC", conn)
+            df_history = pd.read_sql_query(
+                "SELECT filename, score, matching_skills, timestamp FROM resumes WHERE user_id = ? ORDER BY timestamp DESC",
+                conn,
+                params=(st.session_state.user_id,),
+            )
             st.dataframe(df_history, width="stretch")
             conn.close()
 

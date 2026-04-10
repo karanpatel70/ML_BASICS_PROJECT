@@ -6,6 +6,13 @@ import pdfminer.high_level
 from io import BytesIO
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+#login 
+if "logged_in" not in st.session_state or not st.session_state.logged_in:
+    st.warning("Please login first")
+    st.stop()
+if st.sidebar.button("Logout"):
+    st.session_state.logged_in = False
+    st.switch_page("login.py")
 
 st.markdown("""<style> ... </style>""", unsafe_allow_html=True)
 
@@ -149,7 +156,13 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 def extract_text_from_pdf(uploaded_file):
-    pdf_file = BytesIO(uploaded_file.read())  # convert to file-like object
+    def extract_text_from_pdf(uploaded_file):
+        if uploaded_file is None:
+            return ""
+
+    pdf_file = BytesIO(uploaded_file.read())
+    text = pdfminer.high_level.extract_text(pdf_file)
+    return text  # convert to file-like object
     text = pdfminer.high_level.extract_text(pdf_file)  # correct function
     return text
 
@@ -187,43 +200,41 @@ def get_similarity(resume_text, skills):
 #matching logic
 matched = []
 missing = []
-resume_text = extract_text_from_pdf(uploaded_file)
 goal = goal.lower().strip()
-
+resume_text = ""
+goal_skills = []
 if uploaded_file and goal:
 
     resume_text = extract_text_from_pdf(uploaded_file)
-    goal_skills = []
 
 for key in career_skills:
     if key in goal:
         goal_skills = career_skills[key]
         break
-    similarity_scores = get_similarity(resume_text, goal_skills)
+similarity_scores = get_similarity(resume_text, goal_skills)
 
-    matched = [skill for skill, score in similarity_scores.items() if score > 0.1]
-    missing = [skill for skill, score in similarity_scores.items() if score <= 0.1]
+matched = [skill for skill, score in similarity_scores.items() if score > 0.1]
+missing = [skill for skill, score in similarity_scores.items() if score <= 0.1]
 
-    st.markdown(f"<h3>🎯 Goal: {goal}</h3>", unsafe_allow_html=True)
+st.markdown(f"<h3>🎯 Goal: {goal}</h3>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
-
-    with col1:
+col1, col2 = st.columns(2)
+with col1:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown("### ✅ Matched Skills")
         for s in matched:
             st.markdown(f"<div class='success-box'>✔ {s}</div>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    with col2:
+with col2:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown("### ❌ Missing Skills")
         for s in missing:
             st.markdown(f"<div class='error-box'>✘ {s}</div>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 #results
-    st.subheader("Career Goal")
-    st.write(goal)
+st.subheader("Career Goal")
+st.write(goal)
 
 #suggestions
 skill_advice = {
